@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jurnal & Analisa Trading XAU/USD</title>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-dark: #0b0e14;
+      --card-bg: #121824;
+      --card-inner: #1a2232;
+      --border-color: #242d3d;
+      --accent-gold: #d4af37;
+      --accent-gold-hover: #f1c40f;
+      --text-main: #e6edf3;
+      --text-muted: #8b949e;
+      --buy-green: #2ec4b6;
+      --sell-red: #e74c3c;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: var(--bg-dark); color: var(--text-main); padding-bottom: 80px; display: flex; justify-content: center; }
+    .container { width: 100%; max-width: 950px; padding: 15px; display: flex; flex-direction: column; gap: 20px; }
+
+    /* Top Switcher (Analisa / Jurnal) */
+    .top-switcher {
+      display: flex;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 6px;
+      gap: 6px;
+    }
+    .switch-btn {
+      flex: 1;
+      padding: 12px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.2s;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    .switch-btn.active {
+      background: linear-gradient(135deg, var(--accent-gold), #b38f2a);
+      color: #0d1117;
+      box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+    }
+
+    /* Bottom Navigation Bar */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 65px;
+      background: #0f141d;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 1000;
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 8px;
+      flex: 1;
+      text-align: center;
+    }
+    .nav-item.active {
+      color: var(--accent-gold);
+    }
+    .nav-icon {
+      font-size: 1.3rem;
+    }
+
+    /* Views / Tabs */
+    .mode-panel { display: none; flex-direction: column; gap: 20px; }
+    .mode-panel.active { display: flex; }
+
+    .view-panel { display: none; }
+    .view-panel.active { display: flex; flex-direction: column; gap: 20px; }
+
+    /* Header */
+    .header-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; text-align: center; border-top: 3px solid var(--accent-gold); }
+    .header-card h1 { color: var(--accent-gold); font-size: 1.3rem; letter-spacing: 1px; }
+
+    /* Modules */
+    .module-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; }
+    .module-title { color: var(--accent-gold); font-size: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 16px; font-weight: 600; }
+
+    /* Form Elements */
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full-width { grid-column: 1 / -1; }
+    
+    label { font-size: 0.82rem; color: var(--text-muted); font-weight: 600; }
+    input, select, textarea { 
+      background: var(--card-inner); 
+      border: 1px solid var(--border-color); 
+      color: var(--text-main); 
+      padding: 12px; 
+      border-radius: 8px; 
+      font-size: 0.95rem; 
+      color-scheme: dark;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent-gold); outline: none; }
+    input[readonly] { background: #151a24; color: var(--accent-gold); font-weight: bold; cursor: not-allowed; }
+
+    /* Range Input Group (Sekian - Sekian) */
+    .range-inputs { display: flex; align-items: center; gap: 8px; }
+    .range-inputs input { flex: 1; }
+
+    /* Timeframe Row Item in Analisa with Inline Bias Select */
+    .tf-item-card {
+      background: var(--card-inner);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .tf-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: bold;
+      color: var(--accent-gold);
+    }
+    .tf-inputs-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 10px;
+      align-items: center;
+    }
+    @media (max-width: 600px) {
+      .tf-inputs-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Custom Dropdown Multi-Select */
+    .custom-multiselect {
+      background: var(--card-inner);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 0.9rem;
+      color: var(--text-main);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    }
+    .custom-multiselect:after {
+      content: '▼';
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    /* Modal Styling */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      padding: 20px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-content {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 550px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--accent-gold);
+      font-weight: bold;
+    }
+    .modal-body {
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .modal-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .checkbox-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      padding: 8px 10px;
+      background: var(--card-inner);
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+    .checkbox-item input { accent-color: var(--accent-gold); }
+    .category-title { font-size: 0.8rem; color: var(--accent-gold); font-weight: bold; width: 100%; margin-top: 6px; }
+
+    /* Button Styling */
+    .btn-gold { background: linear-gradient(135deg, var(--accent-gold), #b38f2a); color: #0d1117; font-weight: bold; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.95rem; text-transform: uppercase; }
+    .btn-gold:hover { background: var(--accent-gold-hover); }
+
+    /* Toggle Buy/Sell */
+    .pos-toggle { display: flex; gap: 10px; }
+    .pos-btn { 
+      flex: 1; 
+      padding: 12px; 
+      border: 1px solid var(--border-color); 
+      background: var(--card-inner); 
+      color: var(--text-main); 
+      font-weight: bold; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      text-align: center;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    .pos-btn.buy.active { background: var(--buy-green); color: #0d1117; border-color: var(--buy-green); }
+    .pos-btn.sell.active { background: var(--sell-red); color: #ffffff; border-color: var(--sell-red); }
+
+    /* Action Buttons in Table */
+    .btn-action { padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; margin-right: 4px; }
+    .btn-edit { background: #3498db; color: white; }
+    .btn-delete { background: #e74c3c; color: white; }
+
+    /* Stats Grid */
+    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .stat-card { background: var(--card-inner); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; }
+    .stat-label { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 6px; }
+    .stat-value { font-size: 1.25rem; font-weight: bold; color: var(--accent-gold); }
+
+    /* Table Styling */
+    .table-responsive { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { padding: 10px; border-bottom: 1px solid var(--border-color); text-align: left; white-space: nowrap; }
+    th { color: var(--text-muted); background: var(--card-inner); }
+
+    /* Calendar Grid */
+    .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; color: var(--accent-gold); font-weight: bold; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; }
+    .day-name { font-size: 0.75rem; color: var(--text-muted); padding: 4px; }
+    .day-cell { background: var(--card-inner); border: 1px solid var(--border-color); border-radius: 6px; min-height: 45px; padding: 4px; display: flex; flex-direction: column; justify-content: space-between; font-size: 0.75rem; }
+
+    #statusMsg { text-align: center; font-size: 0.85rem; font-weight: bold; margin-top: 10px; }
+    #statusMsgAnalisa { text-align: center; font-size: 0.85rem; font-weight: bold; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- TOP SWITCHER (ANALISA / JURNAL) -->
+  <div class="top-switcher">
+    <div class="switch-btn active" id="btnModeAnalisa" onclick="switchMode('analisa')">📊 ANALISA</div>
+    <div class="switch-btn" id="btnModeJurnal" onclick="switchMode('jurnal')">📝 JURNAL</div>
+  </div>
+
+  <!-- ==================== MODE 1: ANALISA MARKET ==================== -->
+  <div id="modeAnalisa" class="mode-panel active">
+    <div class="header-card">
+      <h1>📈 LEMBAR ANALISA MARKET XAU / USD</h1>
+    </div>
+
+    <form id="analisaForm">
+      <!-- MODUL A: TANGGAL ANALISA -->
+      <div class="module-card">
+        <div class="module-title">📌 TANGGAL & WAKTU ANALISA</div>
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>Tanggal & Waktu Analisa</label>
+            <input type="datetime-local" id="analisaTanggalWaktu" required>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODUL B: MULTI-TIMEFRAME CHARTS & INLINE BIAS (W1 s/d M1) -->
+      <div class="module-card">
+        <div class="module-title">🖼️ MULTI-TIMEFRAME CHART & BIAS ANALISA</div>
+        
+        <!-- Weekly (W1) -->
+        <div class="tf-item-card">
+          <div class="tf-item-header">Weekly (W1)</div>
+          <div class="tf-inputs-grid">
+            <input type="text" id="chartUrl_W1" placeholder="Link Chart W1 (TradingView / Gyazo)">
+            <select id="bias_W1">
+              <option value="">-- Bias W1 --</option>
+              <option value="Bullish">Bullish</option>
+              <option value="Bearish">Bearish</option>
+              <option value="Sideways">Sideways</option>
+            </select>
+          </div>
+          <input type="file" id="chartFile_W1" accept="image/*">
+        </div>
+
+        <!-- Daily (D1) -->
+        <div class="tf-item-card">
+          <div class="tf-item-header">Daily (D1)</div>
+          <div class="tf-inputs-grid">
+            <input type="text" id="chartUrl_D1" placeholder="Link Chart D1 (TradingView / Gyazo)">
+            <select id="bias_D1">
+              <option value="">-- Bias D1 --</option>
+              <option value="Bullish">Bullish</option>
+              <option value="Bearish">Bearish</option>
+              <option value="Sideways">Sideways</option>
+            </select>
+          </div>
+          <input type="file" id="chartFile_D1" accept="image/*">
+        </div>
+
+        <!-- H4 -->
+        <div class="tf-item-card">
+          <div class="tf-item-header">H4</div>
+          <div class="tf-inputs-grid">
+            <input type="text" id="chartUrl_H4" placeholder="Link Chart H4 (TradingView / Gyazo)">
+            <select id="bias_H4">
+              <option value="">-- Bias H4 --</option>
+              <option value="Bullish">Bullish</option>
+              <option value="Bearish">Bearish</option>
+              <option value="Sideways">Sideways</option>
+            </select>
+          </div>
+          <input type="file" id="chartFile_H4" accept="image/*">
+        </div>
+
+        <!-- H1 -->
+        <div class="tf-item-card">
+          <div class="tf-item-header">H1</div>
+          <div class="tf-inputs-grid">
+            <input type="text" id="chartUrl_H1" placeholder="Link Chart H1 (TradingView / Gyazo)">
+            <select id="bias_H1">
+              <option value="">-- Bias H1 --</option>
+              <option value="Bullish">Bullish</option>
+              <option value="Bearish">Bearish</option>
+              <option value="Sideways">Sideways</option>
+            </select>
+          </div>
+          <input type="file" id="chartFile_H1" accept="image/*">
+        </div>
+
+        <!-- M15 -->
+        <div class="tf-item-card">
+          <div class="tf-item-header">M15</div>
+          <div class="tf-inputs-grid">
+            <input type="text" id="chartUrl_M15" placeholder="Link Chart M15 (TradingView / Gyazo)">
+            <select id="bias_M15">
+              <option value="">-- Bias M15 --</option>
+              <option value="Bullish">Bullish</option>
+              <option value="Bearish">Bearish</option>
+              <option value="Sideways">Sideways</option>
+            </select>
+          </div>
+          <input type="file" id="chartFile_M15" accept="image/*">
+        </div>
+
+        <!-- M4 -->
+        <div class="tf-item-card">
+          <div class="tf-item-header">M4</div>
+          <div class="tf-inputs-grid">
+            <input type="text" id="chartUrl_M4" placeholder="Link Chart M4 (TradingView / Gyazo)">
+            <select id="bias_M4">
+              <option value="">-- Bias M4 --</option>
+              <option value="Bullish">Bullish</option>
+              <option value="Bearish">Bearish</option>
+              <option value="Sideways">Sideways</option>
+            </select>
+          </div>
+          <input type="file" id="chartFile_M4" accept="image/*">
+        </div>
+
+        <!-- M1 -->
+        <div class="tf-item-card">
+          <div class="tf-item-header">M1</div>
+          <div class="tf-inputs-grid">
+            <input type="text" id="chartUrl_M1" placeholder="Link Chart M1 (TradingView / Gyazo)">
+            <select id="bias_M1">
+              <option value="">-- Bias M1 --</option>
+              <option value="Bullish">Bullish</option>
+              <option value="Bearish">Bearish</option>
+              <option value="Sideways">Sideways</option>
+            </select>
+          </div>
+          <input type="file" id="chartFile_M1" accept="image/*">
+        </div>
+      </div>
+
+      <!-- MODUL C: TRADING PLAN (S1-S3 & R1-R3) -->
+      <div class="module-card">
+        <div class="module-title">🎯 TRADING PLAN (KEY LEVELS & REASON)</div>
+        
+        <!-- S1 -->
+        <div class="tf-item-card">
+          <div class="tf-item-header">Support 1 (S1)</div>
+          <div class="range-inputs">
+            <input type="number" step="0.01" id="s1_min" placeholder="Dari (misal: 2640.00)">
+            <span>s/d</span>
+            <input type="number" step="0.01" id="s1_max" placeholder="Sampai (misal: 2643.50)">
+          </div>
+          <div class="custom-multiselect" onclick="openReasonModal('s1')">
+            <span id="labelReason_s1">Pilih Reason S1...</span>
+          </div>
+        </div>
+
+        <!-- S2 -->
+        <div class="tf-item-card">
+          <div class="tf-item-header">Support 2 (S2)</div>
+          <div class="range-inputs">
+            <input type="number" step="0.01" id="s2_min" placeholder="Dari...">
+            <span>s/d</span>
+            <input type="number" step="0.01" id="s2_max" placeholder="Sampai...">
+          </div>
+          <div class="custom-multiselect" onclick="openReasonModal('s2')">
+            <span id="labelReason_s2">Pilih Reason S2...</span>
+          </div>
+        </div>
+
+        <!-- S3 -->
+        <div class="tf-item-card">
+          <div class="tf-item-header">Support 3 (S3)</div>
+          <div class="range-inputs">
+            <input type="number" step="0.01" id="s3_min" placeholder="Dari...">
+            <span>s/d</span>
+            <input type="number" step="0.01" id="s3_max" placeholder="Sampai...">
+          </div>
+          <div class="custom-multiselect" onclick="openReasonModal('s3')">
+            <span id="labelReason_s3">Pilih Reason S3...</span>
+          </div>
+        </div>
+
+        <!-- R1 -->
+        <div class="tf-item-card">
+          <div class="tf-item-header">Resistance 1 (R1)</div>
+          <div class="range-inputs">
+            <input type="number" step="0.01" id="r1_min" placeholder="Dari...">
+            <span>s/d</span>
+            <input type="number" step="0.01" id="r1_max" placeholder="Sampai...">
+          </div>
+          <div class="custom-multiselect" onclick="openReasonModal('r1')">
+            <span id="labelReason_r1">Pilih Reason R1...</span>
+          </div>
+        </div>
+
+        <!-- R2 -->
+        <div class="tf-item-card">
+          <div class="tf-item-header">Resistance 2 (R2)</div>
+          <div class="range-inputs">
+            <input type="number" step="0.01" id="r2_min" placeholder="Dari...">
+            <span>s/d</span>
+            <input type="number" step="0.01" id="r2_max" placeholder="Sampai...">
+          </div>
+          <div class="custom-multiselect" onclick="openReasonModal('r2')">
+            <span id="labelReason_r2">Pilih Reason R2...</span>
+          </div>
+        </div>
+
+        <!-- R3 -->
+        <div class="tf-item-card">
+          <div class="tf-item-header">Resistance 3 (R3)</div>
+          <div class="range-inputs">
+            <input type="number" step="0.01" id="r3_min" placeholder="Dari...">
+            <span>s/d</span>
+            <input type="number" step="0.01" id="r3_max" placeholder="Sampai...">
+          </div>
+          <div class="custom-multiselect" onclick="openReasonModal('r3')">
+            <span id="labelReason_r3">Pilih Reason R3...</span>
+          </div>
+        </div>
+
+        <!-- Catatan Tambahan Analisa -->
+        <div class="form-group full-width" style="margin-top: 10px;">
+          <label>Catatan Ringkasan Trading Plan</label>
+          <textarea id="catatanAnalisa" rows="3" placeholder="Skenario trading, news impact, pertimbangan khusus..."></textarea>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-gold" id="btnSubmitAnalisa" style="width:100%;">SIMPAN DATA ANALISA</button>
+      <div id="statusMsgAnalisa"></div>
+    </form>
+
+    <!-- RIWAYAT ANALISA -->
+    <div class="module-card">
+      <div class="module-title">📜 RIWAYAT HASIL ANALISA</div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Waktu</th>
+              <th>Bias W1 / D1 / H4</th>
+              <th>S1 Range</th>
+              <th>R1 Range</th>
+              <th>Catatan</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="historyAnalisaTableBody">
+            <tr>
+              <td colspan="6" style="text-align:center; color: var(--text-muted);">Belum ada riwayat analisa.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ==================== MODE 2: JURNAL TRADING ==================== -->
+  <div id="modeJurnal" class="mode-panel">
+    
+    <!-- PANEL 1: INPUT JURNAL -->
+    <div id="panelInput" class="view-panel active">
+      <div class="header-card">
+        <h1>📊 JURNAL TRADING XAU / USD</h1>
+      </div>
+
+      <form id="tradingForm">
+        <!-- MODUL A -->
+        <div class="module-card">
+          <div class="module-title">📌 CONTEXT & BIAS MARKET</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Tanggal & Waktu Entry</label>
+              <input type="datetime-local" id="tanggalWaktu" required>
+            </div>
+            <div class="form-group">
+              <label>Bias Daily</label>
+              <select id="biasDaily">
+                <option value="">-- Pilih Bias --</option>
+                <option value="Bullish">Bullish</option>
+                <option value="Bearish">Bearish</option>
+                <option value="Sideways">Sideways</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Posisi</label>
+              <div class="pos-toggle">
+                <div class="pos-btn buy active" id="btnBuy" onclick="selectPos('BUY')">BUY</div>
+                <div class="pos-btn sell" id="btnSell" onclick="selectPos('SELL')">SELL</div>
+              </div>
+              <input type="hidden" id="posisi" value="BUY">
+            </div>
+          </div>
+        </div>
+
+        <!-- MODUL B -->
+        <div class="module-card">
+          <div class="module-title">📐 TECHNICAL SETUP & ORDER FLOW</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Reason / Setup</label>
+              <select id="reasonSetup">
+                <option value="">-- Pilih Setup --</option>
+                <option value="Potensi Bull Divergence">Potensi Bull Divergence</option>
+                <option value="Potensi Bear Divergence">Potensi Bear Divergence</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>TF Reason</label>
+              <select id="tfReason">
+                <option value="">-- Pilih Timeframe --</option>
+                <option value="M1">M1</option>
+                <option value="M4">M4</option>
+                <option value="M15">M15</option>
+                <option value="H1">H1</option>
+                <option value="H4">H4</option>
+                <option value="Daily">Daily</option>
+              </select>
+            </div>
+
+            <div class="form-group full-width">
+              <label>Location Price</label>
+              <div class="custom-multiselect" onclick="openModal('modalLoc')">
+                <span id="labelLoc">Pilih Location Price...</span>
+              </div>
+            </div>
+
+            <div class="form-group full-width">
+              <label>Entry Trigger</label>
+              <div class="custom-multiselect" onclick="openModal('modalTrigger')">
+                <span id="labelTrigger">Pilih Entry Trigger...</span>
+              </div>
+            </div>
+
+            <div class="form-group full-width">
+              <label>Kondisi CVD (Orderflow / Absorption)</label>
+              <textarea id="kondisiCVD" rows="2" placeholder="Penjelasan kondisi CVD..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- MODUL C -->
+        <div class="module-card">
+          <div class="module-title">⚖️ TRADE EXECUTION & RISK MANAGEMENT</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Ukuran Lot</label>
+              <input type="number" step="0.01" id="ukuranLot" placeholder="0.10" oninput="calculatePnL()">
+            </div>
+            <div class="form-group">
+              <label>Entry Price</label>
+              <input type="number" step="0.01" id="entryPrice" placeholder="2650.50" oninput="calculatePnL()">
+            </div>
+            <div class="form-group">
+              <label>SL Price</label>
+              <input type="number" step="0.01" id="slPrice" placeholder="2645.00" oninput="calculatePnL()">
+            </div>
+            <div class="form-group">
+              <label>TP Price</label>
+              <input type="number" step="0.01" id="tpPrice" placeholder="2660.00" oninput="calculatePnL()">
+            </div>
+            <div class="form-group">
+              <label>Set BEP Status</label>
+              <select id="setBEP" onchange="toggleBEP(this.value)">
+                <option value="TIDAK">TIDAK</option>
+                <option value="YA">YA</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Harga BEP (Diisi Manual)</label>
+              <input type="number" step="0.01" id="hargaBEP" placeholder="2651.00" disabled oninput="calculatePnL()">
+            </div>
+          </div>
+        </div>
+
+        <!-- MODUL D -->
+        <div class="module-card">
+          <div class="module-title">🧠 OUTCOME & PSYCHOLOGY</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Result</label>
+              <select id="result" onchange="calculatePnL()">
+                <option value="Running">Running</option>
+                <option value="Win">Win</option>
+                <option value="Loss">Loss</option>
+                <option value="BEP">BEP</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Estimasi PnL ($) (Otomatis)</label>
+              <input type="number" step="0.01" id="pnl" placeholder="0.00" readonly>
+            </div>
+
+            <div class="form-group full-width">
+              <label>Link Chart ATAU Upload Gambar Chart</label>
+              <input type="text" id="linkChart" placeholder="https://www.tradingview.com/x/..." style="margin-bottom:6px;">
+              <input type="file" id="fileChart" accept="image/*">
+            </div>
+
+            <div class="form-group full-width">
+              <label>Kondisi Emosi</label>
+              <select id="kondisiEmosi">
+                <option value="">-- Pilih Emosi --</option>
+                <option value="Tenang">Tenang</option>
+                <option value="Disiplin">Disiplin</option>
+                <option value="Plan">Plan</option>
+                <option value="FOMO">FOMO</option>
+                <option value="Ragu-ragu">Ragu-ragu</option>
+                <option value="Revenge">Revenge</option>
+              </select>
+            </div>
+            <div class="form-group full-width">
+              <label>Evaluasi</label>
+              <textarea id="evaluasi" rows="2" placeholder="Catatan evaluasi trade..."></textarea>
+            </div>
+            <div class="form-group full-width">
+              <label>Keterangan</label>
+              <textarea id="keterangan" rows="2" placeholder="Catatan tambahan..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-gold" id="btnSubmit" style="width:100%;">SIMPAN JURNAL TRADING</button>
+        <div id="statusMsg"></div>
+      </form>
+    </div>
+
+    <!-- PANEL 2: RIWAYAT TRADING -->
+    <div id="panelRiwayat" class="view-panel">
+      <div class="header-card">
+        <h1>📜 RIWAYAT TRADING</h1>
+      </div>
+      <div class="module-card">
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Waktu</th>
+                <th>Posisi</th>
+                <th>Setup</th>
+                <th>Entry</th>
+                <th>SL / TP</th>
+                <th>Result</th>
+                <th>PnL ($)</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody">
+              <tr>
+                <td colspan="8" style="text-align:center; color: var(--text-muted);">Memuat riwayat transaksi...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL 3: STATISTIK & KALENDER -->
+    <div id="panelStatistik" class="view-panel">
+      <div class="header-card">
+        <h1>📈 STATISTIK PERFORMANCE</h1>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total Trades</div>
+          <div class="stat-value" id="statTotalTrades">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Win Rate</div>
+          <div class="stat-value" id="statWinRate">0.0%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Cumulative PnL</div>
+          <div class="stat-value" id="statTotalPnL">+$0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg Risk Reward</div>
+          <div class="stat-value" id="statAvgRR">1 : 0.00</div>
+        </div>
+      </div>
+
+      <div class="module-card">
+        <div class="module-title">Grafik Akumulasi PnL XAUUSD ($)</div>
+        <canvas id="pnlChart" height="200"></canvas>
+      </div>
+
+      <div class="module-card">
+        <div class="calendar-header">
+          <span>📅 Kalender PnL Harian</span>
+          <span id="calendarMonthLabel">Okt 2026</span>
+        </div>
+        <div class="calendar-grid">
+          <div class="day-name">Min</div><div class="day-name">Sen</div><div class="day-name">Sel</div>
+          <div class="day-name">Rab</div><div class="day-name">Kam</div><div class="day-name">Jum</div><div class="day-name">Sab</div>
+        </div>
+        <div class="calendar-grid" id="calendarDaysGrid" style="margin-top: 6px;"></div>
+      </div>
+    </div>
+
+    <!-- BOTTOM NAVIGATION (KHUSUS MODE JURNAL) -->
+    <div class="bottom-nav">
+      <div class="nav-item active" id="navInput" onclick="switchTab('panelInput', this)">
+        <div class="nav-icon">📝</div>
+        <span>Input</span>
+      </div>
+      <div class="nav-item" id="navRiwayat" onclick="switchTab('panelRiwayat', this)">
+        <div class="nav-icon">📜</div>
+        <span>Riwayat</span>
+      </div>
+      <div class="nav-item" id="navStatistik" onclick="switchTab('panelStatistik', this)">
+        <div class="nav-icon">📈</div>
+        <span>Statistik</span>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- MODAL LOCATION PRICE (JURNAL) -->
+<div class="modal-overlay" id="modalLoc">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span>Pilih Location Price</span>
+      <span style="cursor:pointer" onclick="closeModal('modalLoc')">✕</span>
+    </div>
+    <div class="modal-body">
+      <div class="category-title">Pivot Levels</div>
+      <div class="checkbox-grid">
+        <label class="checkbox-item"><input type="checkbox" name="locPrice" value="S1" onchange="updateLocLabel()"> S1</label>
+        <label class="checkbox-item"><input type="checkbox" name="locPrice" value="S2" onchange="updateLocLabel()"> S2</label>
+        <label class="checkbox-item"><input type="checkbox" name="locPrice" value="S3" onchange="updateLocLabel()"> S3</label>
+        <label class="checkbox-item"><input type="checkbox" name="locPrice" value="R1" onchange="updateLocLabel()"> R1</label>
+        <label class="checkbox-item"><input type="checkbox" name="locPrice" value="R2" onchange="updateLocLabel()"> R2</label>
+        <label class="checkbox-item"><input type="checkbox" name="locPrice" value="R3" onchange="updateLocLabel()"> R3</label>
+      </div>
+      <div class="category-title">Key Levels</div>
+      <div class="checkbox-grid">
+        <label class="checkbox-item"><input type="checkbox" name="locPrice" value="S W (Support Weekly)" onchange="updateLocLabel()"> Support Weekly</label>
+        <label class="checkbox-item"><input type="checkbox" name="locPrice" value="R W (Resistance Weekly)" onchange="updateLocLabel()"> Resistance Weekly</label>
+        <label class="checkbox-item"><input type="checkbox" name="locPrice" value="Support Daily" onchange="updateLocLabel()"> Support Daily</label>
+        <label class="checkbox-item"><input type="checkbox" name="locPrice" value="Resistance Daily" onchange="updateLocLabel()"> Resistance Daily</label>
+        <label class="checkbox-item"><input type="checkbox" name="locPrice" value="Support H4" onchange="updateLocLabel()"> Support H4</label>
+        <label class="checkbox-item"><input type="checkbox" name="locPrice" value="Resistance H4" onchange="updateLocLabel()"> Resistance H4</label>
+      </div>
+      <div class="category-title">Structure & Geometry</div>
+      <div class="checkbox-grid">
+        <label class="checkbox-item"><input type="checkbox" name="locPrice" value="Trendline" onchange="updateLocLabel()"> Trendline</label>
+        <label class="checkbox-item"><input type="checkbox" name="locPrice" value="Area" onchange="updateLocLabel()"> Area</label>
+        <label class="checkbox-item"><input type="checkbox" name="locPrice" value="Fibo 1618" onchange="updateLocLabel()"> Fibo 1618</label>
+        <label class="checkbox-item"><input type="checkbox" name="locPrice" value="Fibo Area 236 - 618" onchange="updateLocLabel()"> Fibo Area 236 - 618</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-gold" type="button" onclick="closeModal('modalLoc')">Selesai</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ENTRY TRIGGER (JURNAL) -->
+<div class="modal-overlay" id="modalTrigger">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span>Pilih Entry Trigger</span>
+      <span style="cursor:pointer" onclick="closeModal('modalTrigger')">✕</span>
+    </div>
+    <div class="modal-body">
+      <div class="category-title">Candlestick Pattern</div>
+      <div class="checkbox-grid">
+        <label class="checkbox-item"><input type="checkbox" name="entryTrigger" value="Candlestick M1" onchange="updateTriggerLabel()"> Candlestick M1</label>
+        <label class="checkbox-item"><input type="checkbox" name="entryTrigger" value="Candlestick M4" onchange="updateTriggerLabel()"> Candlestick M4</label>
+        <label class="checkbox-item"><input type="checkbox" name="entryTrigger" value="Candlestick M15" onchange="updateTriggerLabel()"> Candlestick M15</label>
+      </div>
+      <div class="category-title">Pink Indikator</div>
+      <div class="checkbox-grid">
+        <label class="checkbox-item"><input type="checkbox" name="entryTrigger" value="Pink Indikator M1" onchange="updateTriggerLabel()"> Pink Indikator M1</label>
+        <label class="checkbox-item"><input type="checkbox" name="entryTrigger" value="Pink Indikator M4" onchange="updateTriggerLabel()"> Pink Indikator M4</label>
+        <label class="checkbox-item"><input type="checkbox" name="entryTrigger" value="Pink Indikator M15" onchange="updateTriggerLabel()"> Pink Indikator M15</label>
+      </div>
+      <div class="category-title">Hijau Muda Indikator</div>
+      <div class="checkbox-grid">
+        <label class="checkbox-item"><input type="checkbox" name="entryTrigger" value="Hijau Indikator M1" onchange="updateTriggerLabel()"> Hijau Indikator M1</label>
+        <label class="checkbox-item"><input type="checkbox" name="entryTrigger" value="Hijau Indikator M4" onchange="updateTriggerLabel()"> Hijau Indikator M4</label>
+        <label class="checkbox-item"><input type="checkbox" name="entryTrigger" value="Hijau Indikator M15" onchange="updateTriggerLabel()"> Hijau Indikator M15</label>
+      </div>
+      <div class="category-title">Retracement</div>
+      <div class="checkbox-grid">
+        <label class="checkbox-item"><input type="checkbox" name="entryTrigger" value="Retracement M1" onchange="updateTriggerLabel()"> Retracement M1</label>
+        <label class="checkbox-item"><input type="checkbox" name="entryTrigger" value="Retracement M4" onchange="updateTriggerLabel()"> Retracement M4</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-gold" type="button" onclick="closeModal('modalTrigger')">Selesai</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL REASON ANALISA LENGKAP (S1-S3 & R1-R3 H4, Daily, Weekly) -->
+<div class="modal-overlay" id="modalReasonAnalisa">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span id="modalReasonTitle">Pilih Reason Area</span>
+      <span style="cursor:pointer" onclick="closeModal('modalReasonAnalisa')">✕</span>
+    </div>
+    <div class="modal-body">
+      <div class="category-title">Support & Resistance Timeframe H4</div>
+      <div class="checkbox-grid">
+        <label class="checkbox-item"><input type="checkbox" name="reasonAnalisaCb" value="S1 H4" onchange="updateReasonAnalisaLabel()"> S1 H4</label>
+        <label class="checkbox-item"><input type="checkbox" name="reasonAnalisaCb" value="S2 H4" onchange="updateReasonAnalisaLabel()"> S2 H4</label>
+        <label class="checkbox-item"><input type="checkbox" name="reasonAnalisaCb" value="S3 H4" onchange="updateReasonAnalisaLabel()"> S3 H4</label>
+        <label class="checkbox-item"><input type="checkbox" name="reasonAnalisaCb" value="R1 H4" onchange="updateReasonAnalisaLabel()"> R1 H4</label>
+        <label class="checkbox-item"><input type="checkbox" name="reasonAnalisaCb" value="R2 H4" onchange="updateReasonAnalisaLabel()"> R2 H4</label>
+        <label class="checkbox-item"><input type="checkbox" name="reasonAnalisaCb" value="R3 H4" onchange="updateReasonAnalisaLabel()"> R3 H4</label>
+      </div>
+
+      <div class="category-title">Support & Resistance Timeframe Daily (D1)</div>
+      <div class="checkbox-grid">
+        <label class="checkbox-item"><input type="checkbox" name="reasonAnalisaCb" value="S1 Daily" onchange="updateReasonAnalisaLabel()"> S1 Daily</label>
+        <label class="checkbox-item"><input type="checkbox" name="reasonAnalisaCb" value="S2 Daily" onchange="updateReasonAnalisaLabel()"> S2 Daily</label>
+        <label class="checkbox-item"><input type="checkbox" name="reasonAnalisaCb" value="S3 Daily" onchange="updateReasonAnalisaLabel()"> S3 Daily</label>
+        <label class="checkbox-item"><input type="checkbox" name="reasonAnalisaCb" value="R1 Daily" onchange="updateReasonAnalisaLabel()"> R1 Daily</label>
+        <label class="checkbox-item"><input type="checkbox" name="reasonAnalisaCb" value="R2 Daily" onchange="updateReasonAnalisaLabel()"> R2 Daily</label>
+        <label class="checkbox-item"><input type="checkbox" name="reasonAnalisaCb" value="R3 Daily" onchange="updateReasonAnalisaLabel()"> R3 Daily</label>
+      </div>
+
+      <div class="category-title">Support & Resistance Timeframe Weekly (W1)</div>
+      <div class="checkbox-grid">
+        <label class="checkbox-item"><input type="checkbox" name="reasonAnalisaCb" value="S1 Weekly" onchange="updateReasonAnalisaLabel()"> S1 Weekly</label>
+        <label class="checkbox-item"><input type="checkbox" name="reasonAnalisaCb" value="S2 Weekly" onchange="updateReasonAnalisaLabel()"> S2 Weekly</label>
+        <label class="checkbox-item"><input type="checkbox" name="reasonAnalisaCb" value="S3 Weekly" onchange="updateReasonAnalisaLabel()"> S3 Weekly</label>
+        <label class="checkbox-item"><input type="checkbox" name="reasonAnalisaCb" value="R1 Weekly" onchange="updateReasonAnalisaLabel()"> R1 Weekly</label>
+        <label class="checkbox-item"><input type="checkbox" name="reasonAnalisaCb" value="R2 Weekly" onchange="updateReasonAnalisaLabel()"> R2 Weekly</label>
+        <label class="checkbox-item"><input type="checkbox" name="reasonAnalisaCb" value="R3 Weekly" onchange="updateReasonAnalisaLabel()"> R3 Weekly</label>
+      </div>
+
+      <div class="category-title">Indikator Moving Average & Fibo</div>
+      <div class="checkbox-grid">
+        <label class="checkbox-item"><input type="checkbox" name="reasonAnalisaCb" value="EMA 89 H1" onchange="updateReasonAnalisaLabel()"> EMA 89 H1</label>
+        <label class="checkbox-item"><input type="checkbox" name="reasonAnalisaCb" value="EMA 144 H1" onchange="updateReasonAnalisaLabel()"> EMA 144 H1</label>
+        <label class="checkbox-item"><input type="checkbox" name="reasonAnalisaCb" value="Area Fibo H1" onchange="updateReasonAnalisaLabel()"> Area Fibo H1</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-gold" type="button" onclick="closeModal('modalReasonAnalisa')">Selesai</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzs3giBiTpBzdMH2QGqbCsFtaS1O_fkFNU5lTcQtKElQTNkW85N-WiUN0SEvwXQ_SJe/exec";
+
+  // DATABASES
+  let localTrades = JSON.parse(localStorage.getItem('xauusd_trades') || '[]');
+  let localAnalisa = JSON.parse(localStorage.getItem('xauusd_analisa') || '[]');
+
+  // AUTO SET DATETIME NOW
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  const formattedNow = now.toISOString().slice(0, 16);
+  document.getElementById('tanggalWaktu').value = formattedNow;
+  document.getElementById('analisaTanggalWaktu').value = formattedNow;
+
+  // SWITCH TOP MODE (ANALISA / JURNAL)
+  function switchMode(mode) {
+    document.getElementById('btnModeAnalisa').classList.remove('active');
+    document.getElementById('btnModeJurnal').classList.remove('active');
+    document.getElementById('modeAnalisa').classList.remove('active');
+    document.getElementById('modeJurnal').classList.remove('active');
+
+    if (mode === 'analisa') {
+      document.getElementById('btnModeAnalisa').classList.add('active');
+      document.getElementById('modeAnalisa').classList.add('active');
+      loadRiwayatAnalisa();
+    } else {
+      document.getElementById('btnModeJurnal').classList.add('active');
+      document.getElementById('modeJurnal').classList.add('active');
+      switchTab('panelInput', document.getElementById('navInput'));
+    }
+  }
+
+  // SWITCH TAB IN JURNAL MODE
+  function switchTab(panelId, element) {
+    document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    
+    document.getElementById(panelId).classList.add('active');
+    if(element) element.classList.add('active');
+
+    if(panelId === 'panelStatistik') renderStatistik();
+    if(panelId === 'panelRiwayat') loadRiwayat();
+  }
+
+  // MODAL LOGIC GENERAL
+  function openModal(id) { document.getElementById(id).classList.add('active'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+  // REASON ANALISA MODAL SYSTEM (S1, S2, S3, R1, R2, R3)
+  let activeReasonTarget = '';
+  let analisaReasonsData = { s1: [], s2: [], s3: [], r1: [], r2: [], r3: [] };
+
+  function openReasonModal(targetKey) {
+    activeReasonTarget = targetKey;
+    document.getElementById('modalReasonTitle').innerText = 'Pilih Reason untuk ' + targetKey.toUpperCase();
+    
+    // Reset Checkboxes based on existing selected state
+    const currentSelected = analisaReasonsData[targetKey] || [];
+    document.querySelectorAll('input[name="reasonAnalisaCb"]').forEach(cb => {
+      cb.checked = currentSelected.includes(cb.value);
+    });
+
+    openModal('modalReasonAnalisa');
+  }
+
+  function updateReasonAnalisaLabel() {
+    if(!activeReasonTarget) return;
+    const checked = Array.from(document.querySelectorAll('input[name="reasonAnalisaCb"]:checked')).map(c => c.value);
+    analisaReasonsData[activeReasonTarget] = checked;
+    document.getElementById('labelReason_' + activeReasonTarget).innerText = checked.length ? checked.join(', ') : ('Pilih Reason ' + activeReasonTarget.toUpperCase() + '...');
+  }
+
+  function updateLocLabel() {
+    const checked = Array.from(document.querySelectorAll('input[name="locPrice"]:checked')).map(c => c.value);
+    document.getElementById('labelLoc').innerText = checked.length ? checked.join(', ') : 'Pilih Location Price...';
+  }
+
+  function updateTriggerLabel() {
+    const checked = Array.from(document.querySelectorAll('input[name="entryTrigger"]:checked')).map(c => c.value);
+    document.getElementById('labelTrigger').innerText = checked.length ? checked.join(', ') : 'Pilih Entry Trigger...';
+  }
+
+  function selectPos(type) {
+    document.getElementById('posisi').value = type;
+    if(type === 'BUY') {
+      document.getElementById('btnBuy').classList.add('active');
+      document.getElementById('btnSell').classList.remove('active');
+    } else {
+      document.getElementById('btnSell').classList.add('active');
+      document.getElementById('btnBuy').classList.remove('active');
+    }
+    calculatePnL();
+  }
+
+  function toggleBEP(val) {
+    const hargaBEPInput = document.getElementById('hargaBEP');
+    hargaBEPInput.disabled = (val !== 'YA');
+    if (val !== 'YA') hargaBEPInput.value = '';
+    calculatePnL();
+  }
+
+  function calculatePnL() {
+    const pos = document.getElementById('posisi').value;
+    const lot = parseFloat(document.getElementById('ukuranLot').value) || 0;
+    const entry = parseFloat(document.getElementById('entryPrice').value) || 0;
+    const sl = parseFloat(document.getElementById('slPrice').value) || 0;
+    const tp = parseFloat(document.getElementById('tpPrice').value) || 0;
+    const hargaBEP = parseFloat(document.getElementById('hargaBEP').value) || 0;
+    const result = document.getElementById('result').value;
+    const setBEP = document.getElementById('setBEP').value;
+    const pnlInput = document.getElementById('pnl');
+
+    if (lot === 0 || entry === 0) { pnlInput.value = "0.00"; return; }
+
+    let pnl = 0;
+    const multiplier = 100 * lot;
+
+    if (result === 'Win' && tp > 0) {
+      pnl = (pos === 'BUY' ? (tp - entry) : (entry - tp)) * multiplier;
+    } else if (result === 'Loss' && sl > 0) {
+      pnl = (pos === 'BUY' ? (sl - entry) : (entry - sl)) * multiplier;
+    } else if (result === 'BEP') {
+      pnl = (setBEP === 'YA' && hargaBEP > 0) ? ((pos === 'BUY' ? (hargaBEP - entry) : (entry - hargaBEP)) * multiplier) : 0;
+    }
+    pnlInput.value = pnl.toFixed(2);
+  }
+
+  function getBase64(file) {
+    return new Promise((resolve, reject) => {
+      if(!file) { resolve(''); return; }
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+    });
+  }
+
+  // SUBMIT FORM ANALISA
+  document.getElementById('analisaForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSubmitAnalisa');
+    const status = document.getElementById('statusMsgAnalisa');
+
+    btn.disabled = true;
+    btn.innerText = "MENYIMPAN ANALISA...";
+    status.style.color = "#d4af37";
+    status.innerText = "Proses mengunggah analisa...";
+
+    const tfs = ['W1', 'D1', 'H4', 'H1', 'M15', 'M4', 'M1'];
+    let tfData = {};
+
+    for (let tf of tfs) {
+      let textUrl = document.getElementById('chartUrl_' + tf).value;
+      let biasVal = document.getElementById('bias_' + tf).value;
+      let fileElem = document.getElementById('chartFile_' + tf);
+      let fileBase64 = fileElem.files.length > 0 ? await getBase64(fileElem.files[0]) : '';
+      
+      tfData[tf] = {
+        chart: fileBase64 || textUrl || '',
+        bias: biasVal
+      };
+    }
+
+    const analisaObj = {
+      id: Date.now(),
+      tanggalWaktu: document.getElementById('analisaTanggalWaktu').value,
+      timeframes: tfData,
+      plan: {
+        s1: { min: document.getElementById('s1_min').value, max: document.getElementById('s1_max').value, reasons: analisaReasonsData.s1 },
+        s2: { min: document.getElementById('s2_min').value, max: document.getElementById('s2_max').value, reasons: analisaReasonsData.s2 },
+        s3: { min: document.getElementById('s3_min').value, max: document.getElementById('s3_max').value, reasons: analisaReasonsData.s3 },
+        r1: { min: document.getElementById('r1_min').value, max: document.getElementById('r1_max').value, reasons: analisaReasonsData.r1 },
+        r2: { min: document.getElementById('r2_min').value, max: document.getElementById('r2_max').value, reasons: analisaReasonsData.r2 },
+        r3: { min: document.getElementById('r3_min').value, max: document.getElementById('r3_max').value, reasons: analisaReasonsData.r3 }
+      },
+      catatan: document.getElementById('catatanAnalisa').value
+    };
+
+    localAnalisa.unshift(analisaObj);
+    localStorage.setItem('xauusd_analisa', JSON.stringify(localAnalisa));
+
+    if(SCRIPT_URL && !SCRIPT_URL.includes("MASUKKAN_URL")) {
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ type: 'analisa', data: analisaObj })
+      }).catch(err => console.error(err));
+    }
+
+    status.style.color = "#2ec4b6";
+    status.innerText = "✨ Analisa Berhasil Disimpan!";
+    document.getElementById('analisaForm').reset();
+    analisaReasonsData = { s1: [], s2: [], s3: [], r1: [], r2: [], r3: [] };
+    ['s1','s2','s3','r1','r2','r3'].forEach(k => document.getElementById('labelReason_' + k).innerText = 'Pilih Reason ' + k.toUpperCase() + '...');
+    
+    btn.disabled = false;
+    btn.innerText = "SIMPAN DATA ANALISA";
+    loadRiwayatAnalisa();
+  });
+
+  function loadRiwayatAnalisa() {
+    const tbody = document.getElementById('historyAnalisaTableBody');
+    if(!localAnalisa.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted)">Belum ada riwayat analisa.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = localAnalisa.map(a => `
+      <tr>
+        <td>${a.tanggalWaktu.replace('T', ' ')}</td>
+        <td>W1: ${a.timeframes.W1 ? a.timeframes.W1.bias : '-'} | D1: ${a.timeframes.D1 ? a.timeframes.D1.bias : '-'} | H4: ${a.timeframes.H4 ? a.timeframes.H4.bias : '-'}</td>
+        <td>${a.plan.s1.min ? (a.plan.s1.min + ' - ' + a.plan.s1.max) : '-'}</td>
+        <td>${a.plan.r1.min ? (a.plan.r1.min + ' - ' + a.plan.r1.max) : '-'}</td>
+        <td>${a.catatan || '-'}</td>
+        <td>
+          <button class="btn-action btn-delete" onclick="deleteAnalisa(${a.id})">Hapus</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function deleteAnalisa(id) {
+    if(confirm("Yakin ingin menghapus analisa ini?")) {
+      localAnalisa = localAnalisa.filter(a => a.id !== id);
+      localStorage.setItem('xauusd_analisa', JSON.stringify(localAnalisa));
+      loadRiwayatAnalisa();
+    }
+  }
+
+  // SUBMIT FORM JURNAL
+  document.getElementById('tradingForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSubmit');
+    const status = document.getElementById('statusMsg');
+
+    btn.disabled = true;
+    btn.innerText = "MENYIMPAN DATA...";
+    status.style.color = "#d4af37";
+    status.innerText = "Mengunggah data...";
+
+    let finalChartUrl = document.getElementById('linkChart').value;
+    const fileInput = document.getElementById('fileChart');
+
+    if (fileInput.files.length > 0) {
+      try { finalChartUrl = await getBase64(fileInput.files[0]); } catch(e){}
+    }
+
+    const tradeObj = {
+      id: Date.now(),
+      tanggalWaktu: document.getElementById('tanggalWaktu').value,
+      biasDaily: document.getElementById('biasDaily').value,
+      posisi: document.getElementById('posisi').value,
+      reasonSetup: document.getElementById('reasonSetup').value,
+      tfReason: document.getElementById('tfReason').value,
+      locationPrice: Array.from(document.querySelectorAll('input[name="locPrice"]:checked')).map(c => c.value).join(', '),
+      entryTrigger: Array.from(document.querySelectorAll('input[name="entryTrigger"]:checked')).map(c => c.value).join(', '),
+      kondisiCVD: document.getElementById('kondisiCVD').value,
+      ukuranLot: document.getElementById('ukuranLot').value,
+      entryPrice: document.getElementById('entryPrice').value,
+      slPrice: document.getElementById('slPrice').value,
+      tpPrice: document.getElementById('tpPrice').value,
+      setBEP: document.getElementById('setBEP').value,
+      hargaBEP: document.getElementById('hargaBEP').value,
+      result: document.getElementById('result').value,
+      pnl: parseFloat(document.getElementById('pnl').value) || 0,
+      linkChart: finalChartUrl,
+      kondisiEmosi: document.getElementById('kondisiEmosi').value,
+      evaluasi: document.getElementById('evaluasi').value,
+      keterangan: document.getElementById('keterangan').value
+    };
+
+    localTrades.unshift(tradeObj);
+    localStorage.setItem('xauusd_trades', JSON.stringify(localTrades));
+
+    if(SCRIPT_URL && !SCRIPT_URL.includes("MASUKKAN_URL")) {
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ type: 'jurnal', data: tradeObj })
+      }).catch(err => console.error(err));
+    }
+
+    status.style.color = "#2ec4b6";
+    status.innerText = "✨ Data Berhasil Disimpan!";
+    document.getElementById('tradingForm').reset();
+    document.getElementById('labelLoc').innerText = "Pilih Location Price...";
+    document.getElementById('labelTrigger').innerText = "Pilih Entry Trigger...";
+    selectPos('BUY');
+    calculatePnL();
+    btn.disabled = false;
+    btn.innerText = "SIMPAN JURNAL TRADING";
+  });
+
+  function loadRiwayat() {
+    const tbody = document.getElementById('historyTableBody');
+    if(!localTrades.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted)">Belum ada riwayat transaksi.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = localTrades.map((t) => `
+      <tr>
+        <td>${t.tanggalWaktu.replace('T', ' ')}</td>
+        <td style="color:${t.posisi === 'BUY' ? 'var(--buy-green)' : 'var(--sell-red)'}; font-weight:bold">${t.posisi}</td>
+        <td>${t.reasonSetup || '-'}</td>
+        <td>${t.entryPrice || '-'}</td>
+        <td>${t.slPrice || '-'} / ${t.tpPrice || '-'}</td>
+        <td>${t.result}</td>
+        <td style="color:${t.pnl >= 0 ? 'var(--buy-green)' : 'var(--sell-red)'}; font-weight:bold">${t.pnl >= 0 ? '+' : ''}$${t.pnl.toFixed(2)}</td>
+        <td>
+          <button class="btn-action btn-edit" onclick="editTrade(${t.id})">Edit</button>
+          <button class="btn-action btn-delete" onclick="deleteTrade(${t.id})">Hapus</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function deleteTrade(id) {
+    if(confirm("Yakin ingin menghapus transaksi ini?")) {
+      localTrades = localTrades.filter(t => t.id !== id);
+      localStorage.setItem('xauusd_trades', JSON.stringify(localTrades));
+      loadRiwayat();
+    }
+  }
+
+  function editTrade(id) {
+    const trade = localTrades.find(t => t.id === id);
+    if(!trade) return;
+
+    document.getElementById('tanggalWaktu').value = trade.tanggalWaktu;
+    document.getElementById('biasDaily').value = trade.biasDaily;
+    selectPos(trade.posisi);
+    document.getElementById('reasonSetup').value = trade.reasonSetup;
+    document.getElementById('tfReason').value = trade.tfReason;
+    document.getElementById('kondisiCVD').value = trade.kondisiCVD;
+    document.getElementById('ukuranLot').value = trade.ukuranLot;
+    document.getElementById('entryPrice').value = trade.entryPrice;
+    document.getElementById('slPrice').value = trade.slPrice;
+    document.getElementById('tpPrice').value = trade.tpPrice;
+    document.getElementById('setBEP').value = trade.setBEP;
+    toggleBEP(trade.setBEP);
+    document.getElementById('hargaBEP').value = trade.hargaBEP;
+    document.getElementById('result').value = trade.result;
+    document.getElementById('linkChart').value = trade.linkChart;
+    document.getElementById('kondisiEmosi').value = trade.kondisiEmosi;
+    document.getElementById('evaluasi').value = trade.evaluasi;
+    document.getElementById('keterangan').value = trade.keterangan;
+
+    localTrades = localTrades.filter(t => t.id !== id);
+    localStorage.setItem('xauusd_trades', JSON.stringify(localTrades));
+
+    switchTab('panelInput', document.getElementById('navInput'));
+    calculatePnL();
+  }
+
+  let pnlChartInstance = null;
+  function renderStatistik() {
+    const totalTrades = localTrades.length;
+    const wins = localTrades.filter(t => t.result === 'Win').length;
+    const winRate = totalTrades ? ((wins / totalTrades) * 100).toFixed(1) : "0.0";
+    const totalPnL = localTrades.reduce((acc, curr) => acc + curr.pnl, 0);
+
+    document.getElementById('statTotalTrades').innerText = totalTrades;
+    document.getElementById('statWinRate').innerText = winRate + "%";
+    document.getElementById('statTotalPnL').innerText = (totalPnL >= 0 ? "+$" : "-$") + Math.abs(totalPnL).toFixed(2);
+    document.getElementById('statAvgRR').innerText = "1 : 2.00";
+
+    const ctx = document.getElementById('pnlChart').getContext('2d');
+    if(pnlChartInstance) pnlChartInstance.destroy();
+
+    let cum = 0;
+    const reversedTrades = [...localTrades].reverse();
+    const chartLabels = reversedTrades.map((_, i) => `#${i+1}`);
+    const chartValues = reversedTrades.map(t => { cum += t.pnl; return cum; });
+
+    pnlChartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: chartLabels.length ? chartLabels : ['#1'],
+        datasets: [{
+          label: 'Akumulasi PnL ($)',
+          data: chartValues.length ? chartValues : [0],
+          borderColor: '#d4af37',
+          backgroundColor: 'rgba(212, 175, 55, 0.1)',
+          fill: true,
+          tension: 0.3,
+          pointBackgroundColor: '#d4af37'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: '#242d3d' }, ticks: { color: '#8b949e' } },
+          y: { grid: { color: '#242d3d' }, ticks: { color: '#8b949e' } }
+        }
+      }
+    });
+
+    const calGrid = document.getElementById('calendarDaysGrid');
+    let daysHTML = '';
+    for(let i=0; i<4; i++) daysHTML += `<div class="day-cell" style="opacity:0"></div>`;
+    for(let d=1; d<=31; d++) {
+      daysHTML += `
+        <div class="day-cell">
+          <span>${d}</span>
+          <span class="day-pnl"></span>
+        </div>
+      `;
+    }
+    calGrid.innerHTML = daysHTML;
+  }
+</script>
+
+</body>
+</html>
